@@ -17,22 +17,42 @@ type FileReader interface {
 	io.ReaderAt
 }
 
+type Superblock struct {
+	// TODO: too long variable name
+	SuperblockVersin                 int
+	FreeSpaceInformationVersion      int
+	RootGroupSymbolTableEntryVersion int
+	SharedHeaderMessageFormatVersion int
+	offset                           int
+	length                           int
+	leafNodeK                        int
+	InternalNodeK                    int
+}
+
 type Reader struct {
 	input    FileReader
 	fileName string
 }
 
+func (r *Reader) readChunk(size int) ([]byte, error) {
+	chunk := make([]byte, size)
+	if err := binary.Read(r.input, binary.BigEndian, chunk); err != nil {
+		return nil, err
+	}
+	return chunk, nil
+}
+
 // parse format signature field
 func (r *Reader) parseSignature() error {
-	// Decimal:        	   137	72	68	70	13	10  	26	10
-	// Hexadecimal:	        89	48	44	46	0d	0a	  1a	0a
-	// ASCII C Notation:	\211	H		D		F	  \r  \n  \032	\n
+	// Decimal:            137   72   68   70   13   10    26   10
+	// Hexadecimal:         89   48   44   46   0d   0a    1a   0a
+	// ASCII C Notation:  \211    H    D    F   \r   \n  \032   \n
 	// https://support.hdfgroup.org/HDF5/doc/H5.format.html
 
 	// get format signature field
-	chunk := make([]byte, signatureSize)
-	if err := binary.Read(r.input, binary.BigEndian, chunk); err != nil {
-		return err
+	chunk, err := r.readChunk(signatureSize)
+	if err != nil {
+		return nil
 	}
 
 	// check format signature field
